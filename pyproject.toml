@@ -1,0 +1,26 @@
+[tool.isort]
+profile = "black"
+
+[tool.poetry]
+name = "tastytrade-ghostfolio"
+version = "0.1.0"
+description = "Transfer Tastytrade transactions to Ghostfolio"
+authors = ["Rafael Oliveira <olirafa@proton.me>"]
+license = "The Unlicense"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+tastytrade = "^6.3"
+requests = "^2.31.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.11.0"
+isort = "^5.12.0"
+pylama = "^8.4.1"
+commitizen = "^3.12.0"
+pytest = "^7.4.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
