@@ -10,5 +10,11 @@ class GhostfolioSettings:
     ACCOUNT_TOKEN = getenv("GHOSTFOLIO_ACCOUNT_TOKEN")
 
 
-class Settings(GhostfolioSettings):
+class TastytradeSettings:
+    USERNAME = getenv("TASTYTRADE_USERNAME")
+    PASSWORD = getenv("TASTYTRADE_PASSWORD")
+
+
+class Settings(GhostfolioSettings, TastytradeSettings):
     Ghostfolio = GhostfolioSettings
+    Tastytrade = TastytradeSettings
