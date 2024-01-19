@@ -83,6 +83,7 @@ trades = filter_trades(transactions)
 activities = adapt_trades(trades)
 
 for activity in activities:
+    activity.account_id = tastytrade_account.account_id
     activity.comment = "Activity created by Tastytrade-Ghostfolio."
 
 print("Started exporting activities to Ghostfolio...")
