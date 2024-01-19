@@ -1,14 +1,10 @@
-import json
-from pprint import pprint
-
-import requests
 from tastytrade import Account, ProductionSession
 from tastytrade.account import Transaction
 
-from tastytrade_ghostfolio.adapters.ghostfolio_activity import adapt_activities
 from tastytrade_ghostfolio.adapters.trade import adapt_trades
 from tastytrade_ghostfolio.configs.settings import Settings
-from tastytrade_ghostfolio.models.ghostfolio_activity import GhostfolioActivity
+from tastytrade_ghostfolio.models.ghostfolio_account import GhostfolioAccount
+from tastytrade_ghostfolio.services.ghostfolio import GhostfolioService
 
 
 def get_tastytrade_session() -> ProductionSession:
@@ -65,39 +61,20 @@ def filter_trades(transactions: list[Transaction]) -> list[Transaction]:
 # # )
 
 
-def get_ghostfolio_authorization_header() -> dict[str, str]:
-    try:
-        response = requests.post(
-            f"{Settings.Ghostfolio.BASE_URL}/auth/anonymous",
-            data={"accessToken": Settings.Ghostfolio.ACCOUNT_TOKEN},
+ghostfolio_service = GhostfolioService()
+ghostfolio_accounts = ghostfolio_service.get_all_accounts()
+
+try:
+    tastytrade_account = next(
+        filter(
+            lambda x: x.name.lower() in ["tastytrade", "tastyworks"],
+            ghostfolio_accounts,
         )
-        response.raise_for_status()
-        response_data = response.json()
-        return {"Authorization": f"Bearer {response_data['authToken']}"}
-
-    except requests.exceptions.HTTPError as ex:
-        raise Exception(f"Error while authenticating with Ghostfolio: {ex}")
-
-
-def export_activities_to_ghostfolio(activities: list[GhostfolioActivity]) -> None:
-    activities = adapt_activities(activities)
-
-    data = {"activities": activities}
-
-    response = requests.post(
-        f"{Settings.Ghostfolio.BASE_URL}/import",
-        headers=ghostfolio_authorization_header,
-        json=data,
     )
 
-    try:
-        response.raise_for_status()
-
-    except requests.exceptions.HTTPError:
-        raise Exception(
-            f"Error while inserting new activities in Ghostfolio: {response.json()}"
-        )
-
+except StopIteration:
+    tastytrade_account = GhostfolioAccount(name="Tastytrade")
+    tastytrade_account = ghostfolio_service.create_account(tastytrade_account)
 
 session = get_tastytrade_session()
 transactions = get_tastytrade_account_history(session)
@@ -108,7 +85,6 @@ activities = adapt_trades(trades)
 for activity in activities:
     activity.comment = "Activity created by Tastytrade-Ghostfolio."
 
-ghostfolio_authorization_header = get_ghostfolio_authorization_header()
 print("Started exporting activities to Ghostfolio...")
-export_activities_to_ghostfolio(activities)
+ghostfolio_service.export_activities_to_ghostfolio(activities)
 print("Done!")
