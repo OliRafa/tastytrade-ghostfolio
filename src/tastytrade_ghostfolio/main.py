@@ -4,6 +4,7 @@ from tastytrade.account import Transaction
 from tastytrade_ghostfolio.adapters.trade import adapt_trades
 from tastytrade_ghostfolio.configs.settings import Settings
 from tastytrade_ghostfolio.models.ghostfolio_account import GhostfolioAccount
+from tastytrade_ghostfolio.models.ghostfolio_activity import TransactionType
 from tastytrade_ghostfolio.services.ghostfolio import GhostfolioService
 
 
@@ -86,6 +87,22 @@ for activity in activities:
     activity.account_id = tastytrade_account.account_id
     activity.comment = "Activity created by Tastytrade-Ghostfolio."
 
+orders = ghostfolio_service.get_all_orders(tastytrade_account.account_id)
+buy_orders = list(filter(lambda x: x.type == TransactionType.BUY, orders))
+
 print("Started exporting activities to Ghostfolio...")
-ghostfolio_service.export_activities_to_ghostfolio(activities)
+activities_for_exporting = []
+for activity in activities:
+    try:
+        next(
+            filter(
+                lambda x: x.date == activity.date
+                and x.quantity == activity.quantity
+                and x.symbol == activity.symbol,
+                buy_orders,
+            )
+        )
+    except StopIteration:
+        activities_for_exporting.append(activity)
+ghostfolio_service.export_activities_to_ghostfolio(activities_for_exporting)
 print("Done!")
