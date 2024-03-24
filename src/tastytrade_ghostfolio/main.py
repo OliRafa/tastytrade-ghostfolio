@@ -4,7 +4,10 @@ from tastytrade.account import Transaction
 from tastytrade_ghostfolio.adapters.trade import adapt_trades
 from tastytrade_ghostfolio.configs.settings import Settings
 from tastytrade_ghostfolio.models.ghostfolio_account import GhostfolioAccount
-from tastytrade_ghostfolio.models.ghostfolio_activity import TransactionType
+from tastytrade_ghostfolio.models.ghostfolio_activity import (
+    GhostfolioActivity,
+    TransactionType,
+)
 from tastytrade_ghostfolio.services.ghostfolio import GhostfolioService
 
 
@@ -27,6 +30,25 @@ def filter_trades(transactions: list[Transaction]) -> list[Transaction]:
             trades.append(transaction)
 
     return trades
+
+
+def filter_stock_splits(transactions: list[Transaction]) -> list[Transaction]:
+    splits = []
+    for transaction in transactions:
+        if transaction.transaction_type == "Receive Deliver" and (
+            transaction.transaction_sub_type == "Forward Split"
+            or transaction.transaction_sub_type == "Reverse Split"
+        ):
+            splits.append(transaction)
+
+    return splits
+
+
+def transform_stock_splits(transactions: list[Transaction]) -> list[GhostfolioActivity]:
+    for transaction in transactions:
+        transaction.price = float(transaction.value) / float(transaction.quantity)
+
+    return adapt_trades(transactions)
 
 
 # def filter_dividends(transactions: list[Transaction]) -> list[Transaction]:
@@ -82,6 +104,12 @@ transactions = get_tastytrade_account_history(session)
 
 trades = filter_trades(transactions)
 activities = adapt_trades(trades)
+
+stock_splits = filter_stock_splits(transactions)
+
+if stock_splits:
+    stock_split_activities = transform_stock_splits(stock_splits)
+    activities += stock_split_activities
 
 for activity in activities:
     activity.account_id = tastytrade_account.account_id
