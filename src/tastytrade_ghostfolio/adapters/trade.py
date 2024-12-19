@@ -5,7 +5,10 @@ from tastytrade_ghostfolio.models.ghostfolio_activity import (
     TransactionType,
 )
 
-TRADE_TYPE_MAPPING = {"Buy to Open": TransactionType.BUY}
+TRADE_TYPE_MAPPING = {
+    "Buy to Open": TransactionType.BUY,
+    "Sell to Close": TransactionType.SELL,
+}
 
 
 def adapt_trades(trades: list[Transaction]) -> list[GhostfolioActivity]:
