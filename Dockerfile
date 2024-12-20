@@ -1,5 +1,5 @@
 # Base Image
-FROM python:3.10-slim AS python-base
+FROM python:3.12-slim AS python-base
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
