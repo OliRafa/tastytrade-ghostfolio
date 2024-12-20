@@ -21,6 +21,12 @@ def adapt_trades(trades: list[Transaction]) -> list[GhostfolioActivity]:
 
 
 def _adapt_trade(trade: Transaction) -> GhostfolioActivity:
+    if trade.transaction_sub_type == "Symbol Change":
+        unit_price = float(trade.net_value) / float(trade.quantity)
+
+    else:
+        unit_price = float(trade.price)
+
     return GhostfolioActivity(
         currency="USD",
         date=trade.transaction_date,
@@ -28,5 +34,5 @@ def _adapt_trade(trade: Transaction) -> GhostfolioActivity:
         quantity=float(trade.quantity),
         symbol=trade.symbol,
         type=TRADE_TYPE_MAPPING[trade.action],
-        unit_price=float(trade.price),
+        unit_price=unit_price,
     )

@@ -10,7 +10,7 @@ def trade_buy() -> Transaction:
     return Transaction.parse_obj(
         {
             "id": 261794408,
-            "account_number": "5WW40512",
+            "account_number": "6VV78917",
             "transaction_type": "Trade",
             "transaction_sub_type": "Buy to Open",
             "description": "Bought 1 CCJ @ 40.40",
@@ -65,7 +65,7 @@ def dividends() -> list[Transaction]:
     return [
         Transaction.parse_obj(
             {
-                "account_number": "5WW40512",
+                "account_number": "6VV78917",
                 "action": None,
                 "agency_price": None,
                 "clearing_fees": None,
@@ -116,7 +116,7 @@ def dividends() -> list[Transaction]:
         ),
         Transaction.parse_obj(
             {
-                "account_number": "5WW40512",
+                "account_number": "6VV78917",
                 "action": None,
                 "agency_price": None,
                 "clearing_fees": None,
@@ -172,7 +172,7 @@ def dividends() -> list[Transaction]:
 def dividend_reinvestment_transaction_buy() -> list[Transaction]:
     return Transaction.parse_obj(
         {
-            "account_number": "5WW40512",
+            "account_number": "6VV78917",
             "action": "Buy to Open",
             "agency_price": None,
             "clearing_fees": None,
@@ -229,7 +229,7 @@ def divident_reinvestment(dividend_reinvestment_transaction_buy) -> list[Transac
         dividend_reinvestment_transaction_buy,
         Transaction.parse_obj(
             {
-                "account_number": "5WW40512",
+                "account_number": "6VV78917",
                 "action": None,
                 "agency_price": None,
                 "clearing_fees": None,
@@ -282,5 +282,122 @@ def divident_reinvestment(dividend_reinvestment_transaction_buy) -> list[Transac
 
 
 @fixture
-def transactions(dividends, divident_reinvestment, trade_buy) -> list[Transaction]:
-    return [*dividends, *divident_reinvestment, trade_buy]
+def symbol_change_sell_old() -> Transaction:
+    return Transaction.parse_obj(
+        {
+            "account_number": "6VV78917",
+            "action": "Sell to Close",
+            "agency_price": None,
+            "clearing_fees": None,
+            "clearing_fees_effect": None,
+            "commission": None,
+            "commission_effect": None,
+            "cost_basis_reconciliation_date": None,
+            "description": "Symbol change:  Close 5.47124 EURN",
+            "destination_venue": None,
+            "exchange": None,
+            "exchange_affiliation_identifier": None,
+            "exec_id": None,
+            "executed_at": datetime.datetime(
+                2024, 7, 15, 10, 0, tzinfo=datetime.timezone.utc
+            ),
+            "ext_exchange_order_number": None,
+            "ext_exec_id": None,
+            "ext_global_order_number": None,
+            "ext_group_fill_id": None,
+            "ext_group_id": None,
+            "id": 820695443,
+            "instrument_type": InstrumentType.EQUITY,
+            "is_estimated_fee": True,
+            "leg_count": None,
+            "lots": None,
+            "net_value": Decimal("82.165"),
+            "net_value_effect": PriceEffect.CREDIT,
+            "order_id": None,
+            "other_charge": None,
+            "other_charge_description": None,
+            "other_charge_effect": None,
+            "price": None,
+            "principal_price": None,
+            "proprietary_index_option_fees": None,
+            "proprietary_index_option_fees_effect": None,
+            "quantity": Decimal("5.47124"),
+            "regulatory_fees": None,
+            "regulatory_fees_effect": None,
+            "reverses_id": None,
+            "symbol": "EURN",
+            "transaction_date": datetime.date(2024, 7, 15),
+            "transaction_sub_type": "Symbol Change",
+            "transaction_type": "Receive Deliver",
+            "underlying_symbol": "EURN",
+            "value": Decimal("82.165"),
+            "value_effect": PriceEffect.CREDIT,
+        }
+    )
+
+
+@fixture
+def symbol_change_buy_new() -> Transaction:
+    return Transaction.parse_obj(
+        {
+            "account_number": "6VV78917",
+            "action": "Buy to Open",
+            "agency_price": None,
+            "clearing_fees": None,
+            "clearing_fees_effect": None,
+            "commission": None,
+            "commission_effect": None,
+            "cost_basis_reconciliation_date": None,
+            "description": "Symbol change:  Open 5.47124 CMBT",
+            "destination_venue": None,
+            "exchange": None,
+            "exchange_affiliation_identifier": None,
+            "exec_id": None,
+            "executed_at": datetime.datetime(
+                2024, 7, 15, 10, 0, tzinfo=datetime.timezone.utc
+            ),
+            "ext_exchange_order_number": None,
+            "ext_exec_id": None,
+            "ext_global_order_number": None,
+            "ext_group_fill_id": None,
+            "ext_group_id": None,
+            "id": 820695444,
+            "instrument_type": InstrumentType.EQUITY,
+            "is_estimated_fee": True,
+            "leg_count": None,
+            "lots": None,
+            "net_value": Decimal("82.165"),
+            "net_value_effect": PriceEffect.DEBIT,
+            "order_id": None,
+            "other_charge": None,
+            "other_charge_description": None,
+            "other_charge_effect": None,
+            "price": None,
+            "principal_price": None,
+            "proprietary_index_option_fees": None,
+            "proprietary_index_option_fees_effect": None,
+            "quantity": Decimal("5.47124"),
+            "regulatory_fees": None,
+            "regulatory_fees_effect": None,
+            "reverses_id": None,
+            "symbol": "CMBT",
+            "transaction_date": datetime.date(2024, 7, 15),
+            "transaction_sub_type": "Symbol Change",
+            "transaction_type": "Receive Deliver",
+            "underlying_symbol": "CMBT",
+            "value": Decimal("82.165"),
+            "value_effect": PriceEffect.DEBIT,
+        }
+    )
+
+
+@fixture
+def symbol_change(symbol_change_sell_old, symbol_change_buy_new) -> list[Transaction]:
+    return [symbol_change_sell_old, symbol_change_buy_new]
+
+
+@fixture
+def transactions(
+    dividends, divident_reinvestment, trade_buy, symbol_change
+) -> list[Transaction]:
+    return [*dividends, *divident_reinvestment, trade_buy, *symbol_change]

@@ -29,7 +29,10 @@ def filter_trades(transactions: list[Transaction]) -> list[Transaction]:
     for transaction in transactions:
         if transaction.transaction_type == "Trade" or (
             transaction.transaction_type == "Receive Deliver"
-            and transaction.transaction_sub_type == "Dividend"
+            and (
+                transaction.transaction_sub_type == "Dividend"
+                or transaction.transaction_sub_type == "Symbol Change"
+            )
         ):
             trades.append(transaction)
 
