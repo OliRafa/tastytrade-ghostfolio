@@ -1,3 +1,5 @@
+from itertools import batched
+
 from tastytrade import Account, ProductionSession
 from tastytrade.account import Transaction
 
@@ -29,7 +31,10 @@ def filter_trades(transactions: list[Transaction]) -> list[Transaction]:
     for transaction in transactions:
         if transaction.transaction_type == "Trade" or (
             transaction.transaction_type == "Receive Deliver"
-            and transaction.transaction_sub_type == "Dividend"
+            and (
+                transaction.transaction_sub_type == "Dividend"
+                or transaction.transaction_sub_type == "Symbol Change"
+            )
         ):
             trades.append(transaction)
 
@@ -37,12 +42,43 @@ def filter_trades(transactions: list[Transaction]) -> list[Transaction]:
 
 
 def adapt_symbols(
-    activities: list[GhostfolioActivity], symbol_mappings: dict[str, str]
-) -> list[GhostfolioActivity]:
+    activities: list[Transaction] | list[GhostfolioActivity],
+    symbol_mappings: dict[str, str],
+) -> list[Transaction] | list[GhostfolioActivity]:
     for activity in activities:
         activity.symbol = symbol_mappings.get(activity.symbol, activity.symbol)
 
     return activities
+
+
+def extract_symbol_changes(
+    transactions: list[Transaction],
+) -> tuple[list[Transaction], list[Transaction]]:
+    symbol_changes = [
+        transaction
+        for transaction in transactions
+        if transaction.transaction_sub_type == "Symbol Change"
+    ]
+
+    if symbol_changes:
+        for change in symbol_changes:
+            transactions.remove(change)
+
+    return transactions, symbol_changes
+
+
+def adapt_symbol_changes(
+    transactions: list[Transaction], symbol_changes: list[Transaction]
+) -> list[Transaction]:
+    symbol_changes = sorted(symbol_changes, key=lambda x: x.transaction_date)
+
+    symbol_changes_mapping = {}
+    for changes in batched(symbol_changes, 2):
+        old_symbol = next(filter(lambda x: x.action == "Sell to Close", changes))
+        new_symbol = next(filter(lambda x: x.action == "Buy to Open", changes))
+        symbol_changes_mapping[old_symbol.symbol] = new_symbol.symbol
+
+    return adapt_symbols(transactions, symbol_changes_mapping)
 
 
 if __name__ == "__main__":
@@ -65,6 +101,11 @@ if __name__ == "__main__":
     transactions = get_tastytrade_account_history(session)
 
     trades = filter_trades(transactions)
+    trades, symbol_changes = extract_symbol_changes(trades)
+    if symbol_changes:
+        print("Adapting symbol changes...")
+        trades = adapt_symbol_changes(trades, symbol_changes)
+
     activities = adapt_trades(trades)
 
     for activity in activities:
