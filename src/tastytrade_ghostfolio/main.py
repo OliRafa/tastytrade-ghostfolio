@@ -4,7 +4,14 @@ from tastytrade.account import Transaction
 from tastytrade_ghostfolio.adapters.trade import adapt_trades
 from tastytrade_ghostfolio.configs.settings import Settings
 from tastytrade_ghostfolio.models.ghostfolio_account import GhostfolioAccount
-from tastytrade_ghostfolio.models.ghostfolio_activity import TransactionType
+from tastytrade_ghostfolio.models.ghostfolio_activity import (
+    GhostfolioActivity,
+    TransactionType,
+)
+from tastytrade_ghostfolio.repositories.symbol_mapping import (
+    SymbolMappingRepository,
+    SymbolMappingsNotFoundException,
+)
 from tastytrade_ghostfolio.services.ghostfolio import GhostfolioService
 
 
@@ -27,6 +34,15 @@ def filter_trades(transactions: list[Transaction]) -> list[Transaction]:
             trades.append(transaction)
 
     return trades
+
+
+def adapt_symbols(
+    activities: list[GhostfolioActivity], symbol_mappings: dict[str, str]
+) -> list[GhostfolioActivity]:
+    for activity in activities:
+        activity.symbol = symbol_mappings.get(activity.symbol, activity.symbol)
+
+    return activities
 
 
 # def filter_dividends(transactions: list[Transaction]) -> list[Transaction]:
@@ -91,7 +107,7 @@ orders = ghostfolio_service.get_all_orders(tastytrade_account.account_id)
 buy_orders = list(filter(lambda x: x.type == TransactionType.BUY, orders))
 
 print("Started exporting activities to Ghostfolio...")
-activities_for_exporting = []
+activities_for_exporting: list[GhostfolioActivity] = []
 for activity in activities:
     try:
         next(
@@ -104,5 +120,12 @@ for activity in activities:
         )
     except StopIteration:
         activities_for_exporting.append(activity)
+
+try:
+    symbol_mappings = SymbolMappingRepository().get_symbol_mappings()
+    activities_for_exporting = adapt_symbols(activities_for_exporting, symbol_mappings)
+except SymbolMappingsNotFoundException:
+    print("Skipping symbol changes, as no mapping file was found.")
+
 ghostfolio_service.export_activities_to_ghostfolio(activities_for_exporting)
 print("Done!")
