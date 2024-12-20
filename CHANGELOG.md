@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+# [1.3.0](https://github.com/OliRafa/tastytrade-ghostfolio/compare/v1.2.0...v1.3.0) (2024-12-20)
+
+
+### Features
+
+* automatically adapt symbol changes ([5f32ab4](https://github.com/OliRafa/tastytrade-ghostfolio/commit/5f32ab46561b05048e7076748366507ddff326f5))
+
 # [1.2.0](https://github.com/OliRafa/tastytrade-ghostfolio/compare/v1.1.0...v1.2.0) (2024-12-20)
 
 
