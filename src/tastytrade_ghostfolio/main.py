@@ -45,38 +45,6 @@ def adapt_symbols(
     return activities
 
 
-# def filter_dividends(transactions: list[Transaction]) -> list[Transaction]:
-#     dividends = []
-#     for transaction in transactions:
-#         if (
-#             transaction.transaction_sub_type == "Dividend"
-#             and transaction.transaction_type == "Money Movement"
-#         ):
-#             dividends.append(transaction)
-
-#     return dividends
-
-
-# def extract_activities_from_account(
-#     activities, account_id: str
-# ) -> list[GhostfolioActivity]:
-#     activities = list(filter(lambda x: x["accountId"] == account_id, activities))
-#     return list(map(lambda x: GhostfolioActivity(**x), activities))
-
-
-# response = requests.get(
-#     f"{Settings.Ghostfolio.BASE_URL}/export",
-#     headers={"Authorization": bearer_token},
-# )
-# response_data = response.json()
-# accounts = response_data.get("accounts")
-# tastytrade_account = next(
-#     filter(lambda x: x["name"].lower() in ["tastyworks", "tastytrade"], accounts)
-# )
-# # activities = extract_activities_from_account(
-# # response_data["activities"], tastytrade_account["id"]
-# # )
-
 if __name__ == "__main__":
     ghostfolio_service = GhostfolioService()
     ghostfolio_accounts = ghostfolio_service.get_all_accounts()
