@@ -94,10 +94,12 @@ if __name__ == "__main__":
         )
 
     except StopIteration:
+        print("Creating new Tastytrade account in Ghostfolio...")
         tastytrade_account = GhostfolioAccount(name="Tastytrade")
         tastytrade_account = ghostfolio_service.create_account(tastytrade_account)
 
     session = get_tastytrade_session()
+    print("Started getting all Tastytrade transactions...")
     transactions = get_tastytrade_account_history(session)
 
     trades = filter_trades(transactions)
@@ -113,7 +115,6 @@ if __name__ == "__main__":
         activity.comment = "Activity created by Tastytrade-Ghostfolio."
 
     orders = ghostfolio_service.get_all_orders(tastytrade_account.account_id)
-    buy_orders = list(filter(lambda x: x.type == TransactionType.BUY, orders))
 
     print("Started exporting activities to Ghostfolio...")
     activities_for_exporting: list[GhostfolioActivity] = []
@@ -124,7 +125,7 @@ if __name__ == "__main__":
                     lambda x: x.date == activity.date
                     and x.quantity == activity.quantity
                     and x.symbol == activity.symbol,
-                    buy_orders,
+                    orders,
                 )
             )
         except StopIteration:
