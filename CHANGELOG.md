@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+# [1.2.0](https://github.com/OliRafa/tastytrade-ghostfolio/compare/v1.1.0...v1.2.0) (2024-12-20)
+
+
+### Features
+
+* **ghostfolio-export:** adapt symbols from mapping file for ghostfolio/yahoo ([5a2c82b](https://github.com/OliRafa/tastytrade-ghostfolio/commit/5a2c82bf97cd6f2e95b7d51b7c545c84863b3aca))
+
 # [1.1.0](https://github.com/OliRafa/tastytrade-ghostfolio/compare/v1.0.0...v1.1.0) (2024-12-19)
 
 
