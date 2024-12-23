@@ -163,3 +163,17 @@ class GhostfolioService:
 
         except requests.exceptions.HTTPError as ex:
             raise Exception(f"Error while requesting accounts to Ghostfolio: {ex}")
+
+    def delete_order(self, order: GhostfolioActivity):
+        response = requests.delete(
+            f"{GhostfolioSettings.BASE_URL}/order/{order.id}",
+            headers=self.AUTHORIZATION_HEADER,
+        )
+
+        try:
+            response.raise_for_status()
+
+        except requests.exceptions.HTTPError:
+            raise Exception(
+                f"Error while deleting order in Ghostfolio: {response.json()}"
+            )
