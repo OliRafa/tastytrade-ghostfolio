@@ -127,9 +127,11 @@ def split_shares(
             and transaction.transaction_date
             <= split_specifications[transaction.symbol]["effective_date"]
         ):
-            transaction.quantity = transaction.quantity * Decimal(
+            split_ratio = Decimal(
                 split_specifications[transaction.symbol]["split_ratio"]
             )
+            transaction.quantity = transaction.quantity * split_ratio
+            transaction.price = transaction.price / split_ratio
 
     return transactions
 
@@ -144,7 +146,8 @@ def extract_outdated_ghostfolio_orders(
                 filter(
                     lambda x: x.date == order.date
                     and x.quantity == order.quantity
-                    and x.symbol == order.symbol,
+                    and x.symbol == order.symbol
+                    and x.unit_price == order.unit_price,
                     activities,
                 )
             )
@@ -164,7 +167,8 @@ def extract_activities_for_exporting(
                 filter(
                     lambda x: x.date == activity.date
                     and x.quantity == activity.quantity
-                    and x.symbol == activity.symbol,
+                    and x.symbol == activity.symbol
+                    and x.unit_price == activity.unit_price,
                     orders,
                 )
             )

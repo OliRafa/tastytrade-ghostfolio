@@ -105,6 +105,19 @@ class TestSplitShares:
 
         assert result.quantity == Decimal("2.0")
 
+    def test_should_divide_unit_price(
+        self, transactions, forward_split, split_specifications
+    ):
+        transactions = [
+            transaction
+            for transaction in transactions
+            if transaction not in forward_split
+        ]
+        result = split_shares(transactions, split_specifications)
+        result = next(filter(lambda x: x.symbol == "CCJ", result))
+
+        assert result.price == Decimal("20.19945")
+
     def test_should_not_change_symbol_after_effective_date(
         self, transactions, forward_split, split_specifications, trade_buy
     ):
@@ -130,15 +143,10 @@ class TestSplitShares:
     def test_should_not_change_symbols_not_in_specifications(
         self,
         trade_buy,
-        forward_split,
         dividend_reinvestment_transaction_buy,
         split_specifications,
     ):
-        transactions = [
-            trade_buy,
-            *forward_split,
-            dividend_reinvestment_transaction_buy,
-        ]
+        transactions = [trade_buy, dividend_reinvestment_transaction_buy]
 
         result = split_shares(transactions, split_specifications)
         result = next(filter(lambda x: x.symbol == "KO", result))
