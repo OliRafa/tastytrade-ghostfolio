@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+# [1.4.0](https://github.com/OliRafa/tastytrade-ghostfolio/compare/v1.3.1...v1.4.0) (2024-12-23)
+
+
+### Features
+
+* handle forward share splits ([06e32d6](https://github.com/OliRafa/tastytrade-ghostfolio/commit/06e32d617744c471600026319e45767b3fa04efd)), closes [#11](https://github.com/OliRafa/tastytrade-ghostfolio/issues/11)
+
 ## [1.3.1](https://github.com/OliRafa/tastytrade-ghostfolio/compare/v1.3.0...v1.3.1) (2024-12-23)
 
 
