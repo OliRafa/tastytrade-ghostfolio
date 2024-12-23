@@ -61,6 +61,114 @@ def trade_buy() -> Transaction:
 
 
 @fixture
+def forward_split() -> Transaction:
+    return [
+        Transaction.parse_obj(
+            {
+                "account_number": "6VV78917",
+                "action": "Sell to Close",
+                "agency_price": None,
+                "clearing_fees": None,
+                "clearing_fees_effect": None,
+                "commission": None,
+                "commission_effect": None,
+                "cost_basis_reconciliation_date": None,
+                "description": "Forward split: Close 1.0 CCJ",
+                "destination_venue": None,
+                "exchange": None,
+                "exchange_affiliation_identifier": None,
+                "exec_id": None,
+                "executed_at": datetime.datetime(
+                    2023, 9, 28, 18, 36, 20, 28000, tzinfo=datetime.timezone.utc
+                ),
+                "ext_exchange_order_number": None,
+                "ext_exec_id": None,
+                "ext_global_order_number": None,
+                "ext_group_fill_id": None,
+                "ext_group_id": None,
+                "id": 274072375,
+                "instrument_type": InstrumentType.EQUITY,
+                "is_estimated_fee": True,
+                "leg_count": None,
+                "lots": None,
+                "net_value": Decimal("40.4"),
+                "net_value_effect": PriceEffect.CREDIT,
+                "order_id": None,
+                "other_charge": None,
+                "other_charge_description": None,
+                "other_charge_effect": None,
+                "price": None,
+                "principal_price": None,
+                "proprietary_index_option_fees": None,
+                "proprietary_index_option_fees_effect": None,
+                "quantity": Decimal("1.0"),
+                "regulatory_fees": None,
+                "regulatory_fees_effect": None,
+                "reverses_id": None,
+                "symbol": "CCJ",
+                "transaction_date": datetime.datetime(2023, 9, 28),
+                "transaction_sub_type": "Forward Split",
+                "transaction_type": "Receive Deliver",
+                "underlying_symbol": "CCJ",
+                "value": Decimal("40.4"),
+                "value_effect": PriceEffect.CREDIT,
+            }
+        ),
+        Transaction.parse_obj(
+            {
+                "account_number": "6VV78917",
+                "action": "Buy to Open",
+                "agency_price": None,
+                "clearing_fees": None,
+                "clearing_fees_effect": None,
+                "commission": None,
+                "commission_effect": None,
+                "cost_basis_reconciliation_date": None,
+                "description": "Forward split: Open 2.0 CCJ",
+                "destination_venue": None,
+                "exchange": None,
+                "exchange_affiliation_identifier": None,
+                "exec_id": None,
+                "executed_at": datetime.datetime(
+                    2023, 9, 28, 18, 36, 21, 28000, tzinfo=datetime.timezone.utc
+                ),
+                "ext_exchange_order_number": None,
+                "ext_exec_id": None,
+                "ext_global_order_number": None,
+                "ext_group_fill_id": None,
+                "ext_group_id": None,
+                "id": 274072376,
+                "instrument_type": InstrumentType.EQUITY,
+                "is_estimated_fee": True,
+                "leg_count": None,
+                "lots": None,
+                "net_value": Decimal("40.4"),
+                "net_value_effect": PriceEffect.CREDIT,
+                "order_id": None,
+                "other_charge": None,
+                "other_charge_description": None,
+                "other_charge_effect": None,
+                "price": None,
+                "principal_price": None,
+                "proprietary_index_option_fees": None,
+                "proprietary_index_option_fees_effect": None,
+                "quantity": Decimal("2.0"),
+                "regulatory_fees": None,
+                "regulatory_fees_effect": None,
+                "reverses_id": None,
+                "symbol": "CCJ",
+                "transaction_date": datetime.datetime(2023, 9, 28),
+                "transaction_sub_type": "Forward Split",
+                "transaction_type": "Receive Deliver",
+                "underlying_symbol": "CCJ",
+                "value": Decimal("40.4"),
+                "value_effect": PriceEffect.CREDIT,
+            }
+        ),
+    ]
+
+
+@fixture
 def dividends() -> list[Transaction]:
     return [
         Transaction.parse_obj(
@@ -398,11 +506,16 @@ def symbol_change(symbol_change_sell_old, symbol_change_buy_new) -> list[Transac
 
 @fixture
 def symbol_changeless_transactions(
-    dividends, divident_reinvestment, trade_buy
+    dividends, divident_reinvestment, trade_buy, forward_split
 ) -> list[Transaction]:
-    return [*dividends, *divident_reinvestment, trade_buy]
+    return [*dividends, *divident_reinvestment, trade_buy, *forward_split]
 
 
 @fixture
 def transactions(symbol_changeless_transactions, symbol_change) -> list[Transaction]:
     return symbol_changeless_transactions + symbol_change
+
+
+@fixture
+def split_specifications() -> dict[str, dict[str, int | datetime.date]]:
+    return {"CCJ": {"split_ratio": 2, "effective_date": datetime.date(2023, 9, 28)}}

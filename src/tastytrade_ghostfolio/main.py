@@ -1,3 +1,5 @@
+import datetime
+from decimal import Decimal
 from itertools import batched
 
 from tastytrade import Account, ProductionSession
@@ -6,10 +8,7 @@ from tastytrade.account import Transaction
 from tastytrade_ghostfolio.adapters.trade import adapt_trades
 from tastytrade_ghostfolio.configs.settings import Settings
 from tastytrade_ghostfolio.models.ghostfolio_account import GhostfolioAccount
-from tastytrade_ghostfolio.models.ghostfolio_activity import (
-    GhostfolioActivity,
-    TransactionType,
-)
+from tastytrade_ghostfolio.models.ghostfolio_activity import GhostfolioActivity
 from tastytrade_ghostfolio.repositories.symbol_mapping import (
     SymbolMappingRepository,
     SymbolMappingsNotFoundException,
@@ -34,6 +33,7 @@ def filter_trades(transactions: list[Transaction]) -> list[Transaction]:
             and (
                 transaction.transaction_sub_type == "Dividend"
                 or transaction.transaction_sub_type == "Symbol Change"
+                or transaction.transaction_sub_type == "Forward Split"
             )
         ):
             trades.append(transaction)
@@ -81,6 +81,59 @@ def adapt_symbol_changes(
     return adapt_symbols(transactions, symbol_changes_mapping)
 
 
+def extract_forward_splits(
+    transactions: list[Transaction],
+) -> tuple[list[Transaction], list[Transaction]]:
+    symbol_changes = [
+        transaction
+        for transaction in transactions
+        if transaction.transaction_sub_type == "Forward Split"
+    ]
+
+    if symbol_changes:
+        for change in symbol_changes:
+            transactions.remove(change)
+
+    return transactions, symbol_changes
+
+
+def get_split_specifications(
+    splits: list[Transaction],
+) -> tuple[list[Transaction], list[Transaction]]:
+    splits = sorted(splits, key=lambda x: x.transaction_date)
+
+    split_specifications = {}
+    for split in batched(splits, 2):
+        sell_transaction = next(filter(lambda x: x.action == "Sell to Close", split))
+        buy_transaction = next(filter(lambda x: x.action == "Buy to Open", split))
+
+        split_ratio = float(buy_transaction.quantity) / float(sell_transaction.quantity)
+
+        split_specifications[buy_transaction.symbol] = {
+            "effective_date": buy_transaction.transaction_date,
+            "split_ratio": split_ratio,
+        }
+
+    return split_specifications
+
+
+def split_shares(
+    transactions: list[Transaction],
+    split_specifications: dict[str, dict[str, int | datetime.date]],
+) -> tuple[list[Transaction], list[Transaction]]:
+    for transaction in transactions:
+        if (
+            transaction.symbol in split_specifications.keys()
+            and transaction.transaction_date
+            <= split_specifications[transaction.symbol]["effective_date"]
+        ):
+            transaction.quantity = transaction.quantity * Decimal(
+                split_specifications[transaction.symbol]["split_ratio"]
+            )
+
+    return transactions
+
+
 if __name__ == "__main__":
     ghostfolio_service = GhostfolioService()
     ghostfolio_accounts = ghostfolio_service.get_all_accounts()
@@ -107,6 +160,12 @@ if __name__ == "__main__":
     if symbol_changes:
         print("Adapting symbol changes...")
         trades = adapt_symbol_changes(trades, symbol_changes)
+
+    trades, forward_splits = extract_forward_splits(trades)
+    if forward_splits:
+        print("Adapting forward splits...")
+        split_specifications = get_split_specifications(forward_splits)
+        trades = split_shares(trades, split_specifications)
 
     activities = adapt_trades(trades)
 

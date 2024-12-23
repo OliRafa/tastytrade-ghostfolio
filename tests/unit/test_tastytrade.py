@@ -1,7 +1,13 @@
+import datetime
+from decimal import Decimal
+
 from tastytrade_ghostfolio.main import (
     adapt_symbol_changes,
+    extract_forward_splits,
     extract_symbol_changes,
     filter_trades,
+    get_split_specifications,
+    split_shares,
 )
 
 
@@ -58,3 +64,83 @@ class TestAdaptSymbolChanges:
             for transaction in result
             if transaction.transaction_sub_type == "Dividend"
         )
+
+
+class TestExtractForwardSplits:
+    def test_when_theres_forward_splits_should_return_transactions_and_splits_separately(
+        self, transactions, forward_split
+    ):
+        clean_transactions, forward_splits = extract_forward_splits(transactions)
+
+        assert forward_splits == forward_split
+        assert forward_split not in clean_transactions
+
+
+class TestGetSplitSpecifications:
+    def test_should_return_effective_date_and_split_ratio(
+        self, forward_split, split_specifications
+    ):
+        result = get_split_specifications(forward_split)
+
+        assert (
+            result["CCJ"]["split_ratio"] == split_specifications["CCJ"]["split_ratio"]
+        )
+        assert (
+            result["CCJ"]["effective_date"]
+            == split_specifications["CCJ"]["effective_date"]
+        )
+
+
+class TestSplitShares:
+    def test_should_split_shares(
+        self, transactions, forward_split, split_specifications
+    ):
+        transactions = [
+            transaction
+            for transaction in transactions
+            if transaction not in forward_split
+        ]
+        result = split_shares(transactions, split_specifications)
+        result = next(filter(lambda x: x.symbol == "CCJ", result))
+
+        assert result.quantity == Decimal("2.0")
+
+    def test_should_not_change_symbol_after_effective_date(
+        self, transactions, forward_split, split_specifications, trade_buy
+    ):
+        trade_buy.transaction_date = datetime.date(2023, 10, 1)
+        transactions = [
+            transaction
+            for transaction in transactions
+            if transaction not in forward_split
+        ]
+        transactions.append(trade_buy)
+
+        result = split_shares(transactions, split_specifications)
+        result = next(
+            filter(
+                lambda x: x.symbol == "CCJ"
+                and x.transaction_date == datetime.date(2023, 10, 1),
+                result,
+            )
+        )
+
+        assert result == trade_buy
+
+    def test_should_not_change_symbols_not_in_specifications(
+        self,
+        trade_buy,
+        forward_split,
+        dividend_reinvestment_transaction_buy,
+        split_specifications,
+    ):
+        transactions = [
+            trade_buy,
+            *forward_split,
+            dividend_reinvestment_transaction_buy,
+        ]
+
+        result = split_shares(transactions, split_specifications)
+        result = next(filter(lambda x: x.symbol == "KO", result))
+
+        assert result == dividend_reinvestment_transaction_buy
