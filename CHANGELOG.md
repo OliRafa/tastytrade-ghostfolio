@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.1](https://github.com/OliRafa/tastytrade-ghostfolio/compare/v1.4.0...v1.4.1) (2024-12-23)
+
+
+### Bug Fixes
+
+* fix outdated orders not being handled properly ([9f39e84](https://github.com/OliRafa/tastytrade-ghostfolio/commit/9f39e846d2de6be625ad53895bb33cbb461d31d9))
+
 # [1.4.0](https://github.com/OliRafa/tastytrade-ghostfolio/compare/v1.3.1...v1.4.0) (2024-12-23)
 
 
