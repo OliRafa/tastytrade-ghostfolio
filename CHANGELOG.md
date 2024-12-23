@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.2](https://github.com/OliRafa/tastytrade-ghostfolio/compare/v1.4.1...v1.4.2) (2024-12-23)
+
+
+### Bug Fixes
+
+* **forward-split:** fix unit price after split not being calculated properly ([6d59c38](https://github.com/OliRafa/tastytrade-ghostfolio/commit/6d59c38931ca77c0732f5e448420838196433567))
+
 ## [1.4.1](https://github.com/OliRafa/tastytrade-ghostfolio/compare/v1.4.0...v1.4.1) (2024-12-23)
 
 
