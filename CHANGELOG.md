@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.1](https://github.com/OliRafa/tastytrade-ghostfolio/compare/v1.3.0...v1.3.1) (2024-12-23)
+
+
+### Bug Fixes
+
+* fix reinserting sell orders multiple times ([3fdda8c](https://github.com/OliRafa/tastytrade-ghostfolio/commit/3fdda8c799f4aa8b71a0659372c727e4a6b1d576))
+
 # [1.3.0](https://github.com/OliRafa/tastytrade-ghostfolio/compare/v1.2.0...v1.3.0) (2024-12-20)
 
 
