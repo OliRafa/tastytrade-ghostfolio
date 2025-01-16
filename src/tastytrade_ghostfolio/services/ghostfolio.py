@@ -108,6 +108,23 @@ class GhostfolioService:
                 f"Error while inserting new activities in Ghostfolio: {response.json()}"
             )
 
+    def get_or_create_account(self) -> GhostfolioAccount:
+        accounts = self.get_all_accounts()
+
+        try:
+            tastytrade_account = next(
+                filter(
+                    lambda x: x.name.lower() in ["tastytrade", "tastyworks"], accounts
+                )
+            )
+
+        except StopIteration:
+            print("Creating new Tastytrade account in Ghostfolio...")
+            tastytrade_account = GhostfolioAccount(name="Tastytrade")
+            tastytrade_account = self.create_account(tastytrade_account)
+
+        return tastytrade_account
+
     def get_all_accounts(self) -> list[GhostfolioAccount]:
         """Get all accounts for the logged in user.
 
