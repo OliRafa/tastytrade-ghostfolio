@@ -1,18 +1,19 @@
-from pydantic import BaseModel, Field
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class GhostfolioAccount(BaseModel):
-    account_id: str | None = Field(None, alias="id", exclude=True)
+    model_config = ConfigDict(populate_by_name=True)
+
+    account_id: Optional[str] = Field(None, alias="id", exclude=True)
     account_type: str = Field("SECURITIES", alias="accountType", exclude=True)
     balance: float = 0.0
     balance_in_base_currency: float = Field(
         0.0, alias="balanceInBaseCurrency", exclude=True
     )
     currency: str = "USD"
-    id: str | None = Field(None, exclude=True)
+    id: Optional[str] = Field(None, exclude=True)
     name: str
-    platform_id: str | None = Field(None, alias="platformId")
-    comment: str | None = "Created by Tastytrade-Ghostfolio."
-
-    class Config:
-        allow_population_by_field_name = True
+    platform_id: Optional[str] = Field(None, alias="platformId")
+    comment: Optional[str] = "Created by Tastytrade-Ghostfolio."

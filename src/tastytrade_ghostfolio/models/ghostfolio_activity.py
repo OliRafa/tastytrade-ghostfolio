@@ -1,7 +1,8 @@
 from datetime import date
 from enum import Enum
+from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TransactionType(Enum):
@@ -15,17 +16,16 @@ class TransactionType(Enum):
 
 
 class GhostfolioActivity(BaseModel):
-    account_id: str | None = Field(None, alias="accountId")
-    comment: str | None
+    model_config = ConfigDict(populate_by_name=True)
+
+    account_id: Optional[str] = Field(None, alias="accountId")
+    comment: Optional[str] = None
     currency: str
-    data_source: str | None = Field(None, alias="dataSource", exclude=True)
+    data_source: Optional[str] = Field(None, alias="dataSource", exclude=True)
     date: date
     fee: float
-    id: str | None = Field(None, exclude=True)
+    id: Optional[str] = Field(None, exclude=True)
     quantity: float
     symbol: str
     type: TransactionType
     unit_price: float = Field(..., alias="unitPrice")
-
-    class Config:
-        allow_population_by_field_name = True

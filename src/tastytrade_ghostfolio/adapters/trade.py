@@ -24,7 +24,7 @@ def _adapt_trade(trade: Transaction) -> GhostfolioActivity:
     return GhostfolioActivity(
         currency="USD",
         date=trade.transaction_date,
-        fee=float(trade.clearing_fees) if trade.clearing_fees else 0.0,
+        fee=abs(float(trade.clearing_fees)) if trade.clearing_fees else 0.0,
         quantity=float(trade.quantity),
         symbol=trade.symbol,
         type=TRADE_TYPE_MAPPING[trade.action],
