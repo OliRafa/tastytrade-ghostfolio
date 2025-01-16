@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.3](https://github.com/OliRafa/tastytrade-ghostfolio/compare/v1.4.2...v1.4.3) (2025-01-16)
+
+
+### Bug Fixes
+
+* fix tastytrade changing their api ([2be150e](https://github.com/OliRafa/tastytrade-ghostfolio/commit/2be150edee7487364008e7046721bbd6a1eb42a9))
+
 ## [1.4.2](https://github.com/OliRafa/tastytrade-ghostfolio/compare/v1.4.1...v1.4.2) (2024-12-23)
 
 
