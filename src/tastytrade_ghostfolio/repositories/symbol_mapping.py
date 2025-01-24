@@ -2,6 +2,8 @@ from pathlib import Path
 
 import yaml
 
+from tastytrade_ghostfolio.core.entity.symbol_change import SymbolChange
+
 
 class SymbolMappingsNotFoundException(Exception):
     ...
@@ -16,9 +18,16 @@ class SymbolMappingRepository:
         with file_path.open("r") as buffer:
             return yaml.safe_load(buffer.read())
 
-    def get_symbol_mappings(self) -> dict[str, str]:
+    def get_symbol_mappings(self) -> SymbolChange:
         try:
-            return self._load_mapping_file(self.mapping_file_path)
+            mappings = self._load_mapping_file(self.mapping_file_path)
+            changes = []
+            for old_symbol, new_symbol in mappings.items():
+                changes.append(
+                    SymbolChange(old_symbol=old_symbol, new_symbol=new_symbol)
+                )
+
+            return changes
 
         except FileNotFoundError:
             raise SymbolMappingsNotFoundException()

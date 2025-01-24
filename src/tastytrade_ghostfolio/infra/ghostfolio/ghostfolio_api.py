@@ -1,19 +1,15 @@
+from typing import Any
+
 import requests
 
-from tastytrade_ghostfolio.adapters.ghostfolio_activity import (
-    adapt_activities,
-    adapt_activities_from_json,
-)
 from tastytrade_ghostfolio.configs.settings import GhostfolioSettings
-from tastytrade_ghostfolio.models.ghostfolio_account import GhostfolioAccount
-from tastytrade_ghostfolio.models.ghostfolio_activity import GhostfolioActivity
 
 
-class GhostfolioService:
-    def __init__(self) -> None:
-        self.AUTHORIZATION_HEADER = self.get_ghostfolio_authorization_header()
+class GhostfolioApi:
+    def __init__(self):
+        self.AUTHORIZATION_HEADER = self._get_ghostfolio_authorization_header()
 
-    def get_ghostfolio_authorization_header(self) -> dict[str, str]:
+    def _get_ghostfolio_authorization_header(self) -> dict[str, str]:
         """Log in the user and get its authenticated header.
 
         Returns
@@ -38,10 +34,10 @@ class GhostfolioService:
         except requests.exceptions.HTTPError as ex:
             raise Exception(f"Error while authenticating with Ghostfolio: {ex}")
 
-    def get_all_orders(self, account_id: str | None = None) -> list[GhostfolioActivity]:
+    def get_orders(self, account_id: str | None = None) -> dict:
         """Get all orders for the logged in user.
 
-        Otionally, the returned orders are filtered for a given `account_id`.
+        Optionally, the returned orders are filtered for a given `account_id`.
 
         Parameters
         ----------
@@ -71,13 +67,12 @@ class GhostfolioService:
                 params=query_parameters,
             )
             response.raise_for_status()
-            data = response.json()
-            return adapt_activities_from_json(data["activities"])
+            return response.json()["activities"]
 
         except requests.exceptions.HTTPError as ex:
             raise Exception(f"Error while requesting orders to Ghostfolio: {ex}")
 
-    def export_activities_to_ghostfolio(self, activities: list[GhostfolioActivity]):
+    def insert_orders(self, orders: list[dict[str, str | float]]):
         """Insert all activities into Ghostfolio for a particular user and account.
 
         Parameters
@@ -90,14 +85,10 @@ class GhostfolioService:
         Exception
             When an HTTP error occurred while inserting the activities.
         """
-        activities = adapt_activities(activities)
-
-        data = {"activities": activities}
-
         response = requests.post(
             f"{GhostfolioSettings.BASE_URL}/import",
             headers=self.AUTHORIZATION_HEADER,
-            json=data,
+            json={"activities": orders},
         )
 
         try:
@@ -108,24 +99,7 @@ class GhostfolioService:
                 f"Error while inserting new activities in Ghostfolio: {response.json()}"
             )
 
-    def get_or_create_account(self) -> GhostfolioAccount:
-        accounts = self.get_all_accounts()
-
-        try:
-            tastytrade_account = next(
-                filter(
-                    lambda x: x.name.lower() in ["tastytrade", "tastyworks"], accounts
-                )
-            )
-
-        except StopIteration:
-            print("Creating new Tastytrade account in Ghostfolio...")
-            tastytrade_account = GhostfolioAccount(name="Tastytrade")
-            tastytrade_account = self.create_account(tastytrade_account)
-
-        return tastytrade_account
-
-    def get_all_accounts(self) -> list[GhostfolioAccount]:
+    def get_accounts(self) -> list[dict[str, Any]]:
         """Get all accounts for the logged in user.
 
         Returns
@@ -144,13 +118,12 @@ class GhostfolioService:
                 headers=self.AUTHORIZATION_HEADER,
             )
             response.raise_for_status()
-            data = response.json()
-            return [GhostfolioAccount(**account) for account in data["accounts"]]
+            return response.json()["accounts"]
 
         except requests.exceptions.HTTPError as ex:
             raise Exception(f"Error while requesting accounts to Ghostfolio: {ex}")
 
-    def create_account(self, account: GhostfolioAccount) -> GhostfolioAccount:
+    def create_account(self, account_data: dict[str, Any]) -> dict[str, Any]:
         """Create a new account in Ghostfolio.
 
         Parameters
@@ -172,18 +145,17 @@ class GhostfolioService:
             response = requests.post(
                 f"{GhostfolioSettings.BASE_URL}/account",
                 headers=self.AUTHORIZATION_HEADER,
-                json=account.dict(by_alias=True),
+                json=account_data,
             )
             response.raise_for_status()
-            data = response.json()
-            return GhostfolioAccount(**data)
+            return response.json()
 
         except requests.exceptions.HTTPError as ex:
-            raise Exception(f"Error while requesting accounts to Ghostfolio: {ex}")
+            raise Exception(f"Error while creating account in Ghostfolio: {ex}")
 
-    def delete_order(self, order: GhostfolioActivity):
+    def delete_order_by_id(self, order_id: str):
         response = requests.delete(
-            f"{GhostfolioSettings.BASE_URL}/order/{order.id}",
+            f"{GhostfolioSettings.BASE_URL}/order/{order_id}",
             headers=self.AUTHORIZATION_HEADER,
         )
 

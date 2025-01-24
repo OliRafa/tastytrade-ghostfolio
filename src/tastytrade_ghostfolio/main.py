@@ -1,94 +1,79 @@
-from tastytrade_ghostfolio.adapters.trade import adapt_trades
-from tastytrade_ghostfolio.entity.ghostfolio_trades import GhostfolioTrades
-from tastytrade_ghostfolio.entity.trades import Trades
-from tastytrade_ghostfolio.models.ghostfolio_account import GhostfolioAccount
-from tastytrade_ghostfolio.models.ghostfolio_activity import GhostfolioActivity
+from tastytrade_ghostfolio.core.entity.portfolio import Portfolio
+from tastytrade_ghostfolio.infra.ghostfolio.ghostfolio_adapter import GhostfolioAdapter
+from tastytrade_ghostfolio.infra.ghostfolio.ghostfolio_api import GhostfolioApi
+from tastytrade_ghostfolio.infra.tastytrade.tastytrade_adapter import TastytradeAdapter
+from tastytrade_ghostfolio.infra.tastytrade.tastytrade_api import TastytradeApi
 from tastytrade_ghostfolio.repositories.symbol_mapping import (
     SymbolMappingRepository,
     SymbolMappingsNotFoundException,
 )
-from tastytrade_ghostfolio.services.ghostfolio import GhostfolioService
-from tastytrade_ghostfolio.services.tastytrade import TastytradeService
-
-
-def extract_outdated_ghostfolio_orders(
-    activities: list[GhostfolioActivity], orders: list[GhostfolioActivity]
-) -> list[GhostfolioActivity]:
-    outdated_orders: list[GhostfolioActivity] = []
-    for order in orders:
-        try:
-            next(
-                filter(
-                    lambda x: x.date == order.date
-                    and x.quantity == order.quantity
-                    and x.symbol == order.symbol
-                    and x.unit_price == order.unit_price,
-                    activities,
-                )
-            )
-        except StopIteration:
-            outdated_orders.append(order)
-
-    return outdated_orders
-
-
-def extract_activities_for_exporting(
-    activities: list[GhostfolioActivity], orders: list[GhostfolioActivity]
-) -> list[GhostfolioActivity]:
-    activities_for_exporting: list[GhostfolioActivity] = []
-    for activity in activities:
-        try:
-            next(
-                filter(
-                    lambda x: x.date == activity.date
-                    and x.quantity == activity.quantity
-                    and x.symbol == activity.symbol
-                    and x.unit_price == activity.unit_price,
-                    orders,
-                )
-            )
-        except StopIteration:
-            activities_for_exporting.append(activity)
-
-    return activities_for_exporting
-
 
 if __name__ == "__main__":
-    ghostfolio_service = GhostfolioService()
-    tastytrade_account = ghostfolio_service.get_or_create_account()
-
-    tastytrade_service = TastytradeService()
     print("Started getting all Tastytrade transactions...")
-    transactions = tastytrade_service.get_trades_history()
+    tastytrade = TastytradeAdapter(TastytradeApi())
 
-    trades = Trades(transactions)
-    trades.adapt_symbol_changes()
-    trades.adapt_split_shares()
+    portfolio = Portfolio()
+    symbols = tastytrade.get_assets()
+    for symbol in symbols:
+        trades = tastytrade.get_trades(symbol)
+        portfolio.add_asset(symbol, trades)
+        dividend_reinvestments = tastytrade.get_dividends(symbol)
+        if dividend_reinvestments:
+            portfolio.add_dividends(symbol, dividend_reinvestments)
 
-    ghostfolio_trades = GhostfolioTrades(adapt_trades(trades.transactions))
-    ghostfolio_trades.add_account_info(tastytrade_account.account_id)
+    ghostfolio = GhostfolioAdapter(GhostfolioApi())
+    ghostfolio_account = ghostfolio.get_or_create_account()
+    ghostfolio_account.add_portfolio(portfolio)
+
+    symbol_changes = tastytrade.get_symbol_changes()
+    if symbol_changes:
+        print("Adapting symbol changes...")
+        portfolio.adapt_symbol_changes(symbol_changes)
+
+        for change in symbol_changes:
+            outdated_orders = ghostfolio.get_orders_by_symbol(
+                ghostfolio_account.account_id, change.old_symbol
+            )
+            if outdated_orders:
+                print(
+                    f'Deleting outdated orders for "{change.old_symbol}" '
+                    f'after changing to "{change.new}"...'
+                )
+                ghostfolio.delete_orders(outdated_orders)
+
+    stock_splits = tastytrade.get_splits()
+    if stock_splits:
+        print("Handling stock splits...")
+        portfolio.adapt_stock_splits(stock_splits)
 
     try:
         symbol_mappings = SymbolMappingRepository().get_symbol_mappings()
-        activities = ghostfolio_trades.adapt_symbols(symbol_mappings)
+        print("Handling symbol changes from mapping file...")
+        portfolio.adapt_symbol_changes(symbol_mappings)
+
     except SymbolMappingsNotFoundException:
         print("Skipping symbol changes, as no mapping file was found.")
 
     print("Started exporting activities to Ghostfolio...")
-    orders = ghostfolio_service.get_all_orders(tastytrade_account.account_id)
-    outdated_orders = extract_outdated_ghostfolio_orders(
-        ghostfolio_trades.activities, orders
-    )
-    if outdated_orders:
-        print("Deleting outdated orders...")
-        for order in outdated_orders:
-            ghostfolio_service.delete_order(order)
+    symbols = portfolio.get_symbols()
+    for symbol in symbols:
+        orders = ghostfolio.get_orders_by_symbol(ghostfolio_account.account_id, symbol)
 
-    activities = extract_activities_for_exporting(ghostfolio_trades.activities, orders)
-    if activities:
-        print("Exporting new activities...")
-        ghostfolio_service.export_activities_to_ghostfolio(activities)
-    else:
-        print("No new activities to import!")
+        outdated_orders = portfolio.get_absent_trades(symbol, orders)
+        if outdated_orders:
+            print(f"Deleting outdated orders for `{symbol}`...")
+            ghostfolio.delete_orders(outdated_orders)
+            orders = [order for order in orders if order not in outdated_orders]
+
+        if orders:
+            portfolio.delete_repeated_trades(symbol, orders)
+
+    print("Exporting new activities to Ghostfolio...")
+    ghostfolio.export_portfolio(ghostfolio_account)
+
+    # if activities:
+    #     ghostfolio_service.export_activities_to_ghostfolio(activities)
+    # else:
+    #     print("No new activities to import!")
 
     print("Done!")
