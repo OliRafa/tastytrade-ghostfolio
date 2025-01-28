@@ -1,16 +1,52 @@
 import datetime
 from decimal import Decimal
 
+import pytest
 from pytest import fixture
 
 from tastytrade_ghostfolio.core.entity.asset import Asset
+from tastytrade_ghostfolio.core.entity.dividend_info import DividendInfo
 from tastytrade_ghostfolio.core.entity.split import Split
 from tastytrade_ghostfolio.core.entity.trade import Trade
 from tastytrade_ghostfolio.core.entity.transaction_type import TransactionType
+from tastytrade_ghostfolio.core.exceptions import TradeNotFoundException
 from tests.conftest import mark_test
 
 
 class AssetFactory:
+    @fixture
+    def dividend_info(self) -> DividendInfo:
+        return DividendInfo(
+            asset="STOCKA",
+            ex_dividend_date=datetime.date(2023, 11, 28),
+            unit_price=Decimal("12.5"),
+        )
+
+    @fixture
+    def dividend(self) -> Trade:
+        return Trade(
+            executed_at=datetime.datetime(
+                2023, 11, 30, 0, tzinfo=datetime.timezone.utc
+            ),
+            fee=Decimal("0.0"),
+            symbol="STOCKA",
+            transaction_type=TransactionType.DIVIDEND,
+            unit_price=Decimal("0.0"),
+            value=Decimal("25.0"),
+        )
+
+    @fixture
+    def dividend_tax(self) -> Trade:
+        return Trade(
+            executed_at=datetime.datetime(
+                2023, 11, 30, 0, tzinfo=datetime.timezone.utc
+            ),
+            fee=Decimal("8.333"),
+            symbol="STOCKA",
+            transaction_type=TransactionType.FEE,
+            unit_price=Decimal("0.0"),
+        )
+
     @fixture
     def trade(self) -> Trade:
         return Trade(
@@ -34,7 +70,7 @@ class TestSplitShares(AssetFactory):
     @fixture
     def split(self) -> Split:
         return Split(
-            effective_date=datetime.datetime(2023, 9, 28), ratio=2, symbol="CCJ"
+            effective_date=datetime.datetime(2023, 9, 28), ratio=2, symbol="STOCKA"
         )
 
     @mark_test
@@ -86,6 +122,14 @@ class TestHasTrade(AssetFactory):
 
         assert result is False
 
+    @mark_test
+    def should_return_true_when_dividend_trade_exists(self, dividend, dividend_info):
+        self.asset.add_dividends([dividend], [dividend_info])
+
+        result = self.asset.has_trade(dividend)
+
+        assert result is True
+
 
 class TestGetTrade(AssetFactory):
     @mark_test
@@ -96,6 +140,26 @@ class TestGetTrade(AssetFactory):
 
         assert result == trade
 
+    @mark_test
+    def when_given_dividend_should_return_it(self, dividend, dividend_info):
+        self.asset.add_dividends([dividend], [dividend_info])
+
+        result = self.asset.get_trade(
+            dividend.executed_at,
+            dividend.quantity,
+            dividend.symbol,
+            dividend.unit_price,
+        )
+
+        assert result.transaction_type == TransactionType.DIVIDEND
+
+    @mark_test
+    def when_trade_isnt_found_should_raise_exception(self):
+        with pytest.raises(TradeNotFoundException):
+            self.asset.get_trade(
+                datetime.datetime.now(), Decimal("0.0"), "NOTASYMBOL", Decimal("0.0")
+            )
+
 
 class TestDeleteTrade(AssetFactory):
     @mark_test
@@ -103,6 +167,15 @@ class TestDeleteTrade(AssetFactory):
         self.asset.delete_trade(trade)
 
         results = self.asset.trades
+
+        assert not results
+
+    @mark_test
+    def when_given_dividend_should_delete_it(self, dividend, dividend_info):
+        self.asset.add_dividends([dividend], [dividend_info])
+        self.asset.delete_trade(dividend)
+
+        results = self.asset.dividends
 
         assert not results
 
@@ -121,3 +194,88 @@ class TestChangeSymbol(AssetFactory):
         results = self.asset.trades
 
         assert all(trade.symbol == "NEWSTOCKA" for trade in results)
+
+
+class TestAddDividends(AssetFactory):
+    @mark_test
+    def when_adding_dividend_should_add_tax_as_fee(
+        self, dividend, dividend_tax, dividend_info
+    ):
+        inputs = [dividend, dividend_tax]
+
+        self.asset.add_dividends(inputs, [dividend_info])
+        results = self.asset.dividends
+
+        assert len(results) == 1
+        assert results[0].transaction_type == TransactionType.DIVIDEND
+        assert results[0].fee == dividend_tax.fee
+
+    @mark_test
+    def dividends_may_not_have_tax_attached_to_it(
+        self, dividend: Trade, dividend_tax, dividend_info: DividendInfo
+    ):
+        new_dividend = dividend.model_copy()
+        new_dividend.executed_at += datetime.timedelta(days=31)
+
+        new_dividend_info = dividend_info.model_copy()
+        new_dividend_info.ex_dividend_date += datetime.timedelta(days=31)
+
+        dividends = [dividend, dividend_tax, new_dividend]
+        dividend_infos = [dividend_info, new_dividend_info]
+
+        self.asset.add_dividends(dividends, dividend_infos)
+        results = self.asset.dividends
+
+        assert len(results) == 2
+        assert all(
+            result.transaction_type == TransactionType.DIVIDEND for result in results
+        )
+        assert any(result.fee == Decimal("0.0") for result in results)
+
+    @mark_test
+    def should_calculate_quantity(
+        self, dividend: Trade, trade: Trade, dividend_info: DividendInfo
+    ):
+        second_trade_before_dividends = trade.model_copy()
+        second_trade_before_dividends.executed_at -= datetime.timedelta(days=2)
+
+        trade_after_dividends = trade.model_copy()
+        trade_after_dividends.executed_at = dividend.executed_at + datetime.timedelta(
+            days=2
+        )
+        self.asset.add_trades([second_trade_before_dividends, trade_after_dividends])
+
+        self.asset.add_dividends([dividend], [dividend_info])
+        result = self.asset.dividends[0]
+
+        assert (
+            result.quantity == trade.quantity + second_trade_before_dividends.quantity
+        )
+        assert result.unit_price == Decimal("12.5")
+
+    @mark_test
+    def when_theres_dividend_reinvestment_should_add_to_trades(
+        self, dividend: Trade, dividend_info: DividendInfo
+    ):
+        reinvestment = Trade(
+            executed_at=dividend.executed_at,
+            fee=Decimal("0.001"),
+            quantity=Decimal("0.58"),
+            symbol=dividend.symbol,
+            transaction_type=TransactionType.BUY,
+            unit_price=dividend.value,
+        )
+
+        trade_count_before_dividends = len(self.asset.trades)
+
+        self.asset.add_dividends([dividend, reinvestment], [dividend_info])
+        dividends = self.asset.dividends
+
+        assert all(
+            dividend.transaction_type == TransactionType.DIVIDEND
+            for dividend in dividends
+        )
+
+        trades = self.asset.trades
+
+        assert len(trades) == trade_count_before_dividends + 1

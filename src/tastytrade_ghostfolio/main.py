@@ -1,4 +1,10 @@
 from tastytrade_ghostfolio.core.entity.portfolio import Portfolio
+from tastytrade_ghostfolio.infra.dividends_provider.dividends_provider_adapter import (
+    DividendsProviderAdapter,
+)
+from tastytrade_ghostfolio.infra.dividends_provider.yahoo_finance_api import (
+    YahooFinanceApi,
+)
 from tastytrade_ghostfolio.infra.ghostfolio.ghostfolio_adapter import GhostfolioAdapter
 from tastytrade_ghostfolio.infra.ghostfolio.ghostfolio_api import GhostfolioApi
 from tastytrade_ghostfolio.infra.tastytrade.tastytrade_adapter import TastytradeAdapter
@@ -11,26 +17,35 @@ from tastytrade_ghostfolio.repositories.symbol_mapping import (
 if __name__ == "__main__":
     print("Started getting all Tastytrade transactions...")
     tastytrade = TastytradeAdapter(TastytradeApi())
-
-    portfolio = Portfolio()
-    symbols = tastytrade.get_assets()
-    for symbol in symbols:
-        trades = tastytrade.get_trades(symbol)
-        portfolio.add_asset(symbol, trades)
-        dividend_reinvestments = tastytrade.get_dividends(symbol)
-        if dividend_reinvestments:
-            portfolio.add_dividends(symbol, dividend_reinvestments)
+    dividends_provider = DividendsProviderAdapter(YahooFinanceApi())
 
     ghostfolio = GhostfolioAdapter(GhostfolioApi())
     ghostfolio_account = ghostfolio.get_or_create_account()
-    ghostfolio_account.add_portfolio(portfolio)
 
+    portfolio = Portfolio()
     symbol_changes = tastytrade.get_symbol_changes()
     if symbol_changes:
         print("Adapting symbol changes...")
-        portfolio.adapt_symbol_changes(symbol_changes)
-
         for change in symbol_changes:
+            trades = tastytrade.get_trades(change.old_symbol)
+            portfolio.add_asset(change.old_symbol, trades)
+
+            trades = tastytrade.get_trades(change.new_symbol)
+            portfolio.add_asset(change.new_symbol, trades)
+            portfolio.adapt_symbol_changes(symbol_changes)
+
+            old_dividends = tastytrade.get_dividends(change.old_symbol)
+            new_dividends = tastytrade.get_dividends(change.new_symbol)
+            if old_dividends or new_dividends:
+                dividend_infos = dividends_provider.get_by_symbol(change.new_symbol)
+                if old_dividends:
+                    for dividend in old_dividends:
+                        dividend.symbol = change.new_symbol
+
+                portfolio.add_dividends(
+                    change.new_symbol, old_dividends + new_dividends, dividend_infos
+                )
+
             outdated_orders = ghostfolio.get_orders_by_symbol(
                 ghostfolio_account.account_id, change.old_symbol
             )
@@ -40,6 +55,21 @@ if __name__ == "__main__":
                     f'after changing to "{change.new}"...'
                 )
                 ghostfolio.delete_orders(outdated_orders)
+
+    symbols = tastytrade.get_assets()
+    symbols = [
+        symbol
+        for symbol in symbols
+        if symbol not in portfolio.get_symbols() and symbol not in symbol_changes
+    ]
+    for symbol in symbols:
+        trades = tastytrade.get_trades(symbol)
+        portfolio.add_asset(symbol, trades)
+
+        dividends = tastytrade.get_dividends(symbol)
+        if dividends:
+            dividend_infos = dividends_provider.get_by_symbol(symbol)
+            portfolio.add_dividends(symbol, dividends, dividend_infos)
 
     stock_splits = tastytrade.get_splits()
     if stock_splits:
@@ -52,11 +82,10 @@ if __name__ == "__main__":
         portfolio.adapt_symbol_changes(symbol_mappings)
 
     except SymbolMappingsNotFoundException:
-        print("Skipping symbol changes, as no mapping file was found.")
+        print("Skipping symbol changes from mapping file, as no file was found.")
 
     print("Started exporting activities to Ghostfolio...")
-    symbols = portfolio.get_symbols()
-    for symbol in symbols:
+    for symbol in portfolio.get_symbols():
         orders = ghostfolio.get_orders_by_symbol(ghostfolio_account.account_id, symbol)
 
         outdated_orders = portfolio.get_absent_trades(symbol, orders)
@@ -69,6 +98,7 @@ if __name__ == "__main__":
             portfolio.delete_repeated_trades(symbol, orders)
 
     print("Exporting new activities to Ghostfolio...")
+    ghostfolio_account.add_portfolio(portfolio)
     ghostfolio.export_portfolio(ghostfolio_account)
 
     # if activities:

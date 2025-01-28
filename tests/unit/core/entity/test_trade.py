@@ -20,3 +20,53 @@ class TestTrade:
 
         trade.change_symbol("NEW")
         assert trade.symbol == "NEW"
+
+    @mark_test
+    def when_dividend_has_unit_price_and_value_should_calculate_quantity(self):
+        trade = Trade(
+            executed_at=datetime.now(),
+            fee=Decimal("0.0"),
+            symbol="TEST",
+            transaction_type=TransactionType.DIVIDEND,
+            unit_price=Decimal("12.5"),
+            value=Decimal("25.0"),
+        )
+
+        assert trade.quantity == Decimal("2.0")
+
+    @mark_test
+    def when_calculating_quantity_should_round_it_to_14_decimal_places(self):
+        trade = Trade(
+            executed_at=datetime.now(),
+            fee=Decimal("0.21"),
+            symbol="TEST",
+            transaction_type=TransactionType.DIVIDEND,
+            unit_price=Decimal("0.234"),
+            value=Decimal("1.4"),
+        )
+
+        assert trade.quantity == Decimal("5.98290598290598")
+
+
+class TestEquals:
+    @mark_test
+    def should_ignore_trailing_zeros_when_comparing(self):
+        trade_a = Trade(
+            executed_at=datetime.now(),
+            fee=Decimal("0.210000"),
+            symbol="TEST",
+            transaction_type=TransactionType.DIVIDEND,
+            unit_price=Decimal("0.234000"),
+            value=Decimal("1.4"),
+        )
+
+        trade_b = Trade(
+            executed_at=datetime.now(),
+            fee=Decimal("0.21"),
+            symbol="TEST",
+            transaction_type=TransactionType.DIVIDEND,
+            unit_price=Decimal("0.234"),
+            value=Decimal("1.4"),
+        )
+
+        assert trade_a == trade_b

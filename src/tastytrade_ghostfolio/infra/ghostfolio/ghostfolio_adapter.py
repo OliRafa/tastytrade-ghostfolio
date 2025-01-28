@@ -60,7 +60,11 @@ class GhostfolioAdapter:
         orders = []
         for asset in account.portfolio.get_symbols():
             trades = account.portfolio.get_trades(asset)
-            orders += [self._adapt_trade(account.account_id, trade) for trade in trades]
+            dividends = account.portfolio.get_dividends(asset)
+            orders += [
+                self._adapt_trade(account.account_id, trade)
+                for trade in trades + dividends
+            ]
 
         self.ghostfolio_api.insert_orders(orders)
 

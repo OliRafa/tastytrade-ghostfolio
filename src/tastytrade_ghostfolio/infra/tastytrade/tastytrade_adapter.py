@@ -8,13 +8,9 @@ from tastytrade_ghostfolio.core.entity.split import Split
 from tastytrade_ghostfolio.core.entity.symbol_change import SymbolChange
 from tastytrade_ghostfolio.core.entity.trade import Trade
 from tastytrade_ghostfolio.core.entity.transaction_type import TransactionType
+from tastytrade_ghostfolio.core.exceptions import TransactionTypeNotFoundException
 from tastytrade_ghostfolio.core.ports.tastytrade import TastytradePort
 from tastytrade_ghostfolio.infra.tastytrade.tastytrade_api import TastytradeApi
-
-TRADE_TYPE_MAPPING = {
-    "Buy to Open": TransactionType.BUY,
-    "Sell to Close": TransactionType.SELL,
-}
 
 
 class TastytradeAdapter(TastytradePort):
@@ -29,14 +25,38 @@ class TastytradeAdapter(TastytradePort):
         transactions = self._filter_trades(asset)
         return list(map(self._adapt_trade, transactions))
 
-    @staticmethod
-    def _adapt_trade(transaction: Transaction) -> Trade:
-        fee = TastytradeAdapter._calculate_total_fee(
-            transaction.clearing_fees,
-            transaction.commission,
-            transaction.proprietary_index_option_fees,
-            transaction.regulatory_fees,
-        )
+    def _adapt_trade_type(self, transaction: Transaction) -> TransactionType:
+        match transaction.action:
+            case "Buy to Open":
+                return TransactionType.BUY
+            case "Sell to Close":
+                return TransactionType.SELL
+            case None:
+                if transaction.transaction_sub_type == "Dividend":
+                    if transaction.value < 0:
+                        return TransactionType.FEE
+
+                    return TransactionType.DIVIDEND
+
+                raise TransactionTypeNotFoundException(transaction)
+
+            case _:
+                raise TransactionTypeNotFoundException(transaction)
+
+    def _adapt_trade(self, transaction: Transaction) -> Trade:
+        transaction_type = self._adapt_trade_type(transaction)
+        match transaction_type:
+            case TransactionType.FEE:
+                fee = abs(transaction.value)
+            case _:
+                fee = TastytradeAdapter._calculate_total_fee(
+                    transaction.clearing_fees,
+                    transaction.commission,
+                    transaction.proprietary_index_option_fees,
+                    transaction.regulatory_fees,
+                )
+
+        unit_price = Decimal("0.0") if transaction.price is None else transaction.price
 
         return Trade(
             description=transaction.description,
@@ -44,8 +64,9 @@ class TastytradeAdapter(TastytradePort):
             fee=fee,
             quantity=transaction.quantity,
             symbol=transaction.symbol,
-            transaction_type=TRADE_TYPE_MAPPING[transaction.action],
-            unit_price=transaction.price,
+            transaction_type=transaction_type,
+            unit_price=unit_price,
+            value=transaction.value,
         )
 
     @staticmethod
@@ -138,12 +159,33 @@ class TastytradeAdapter(TastytradePort):
         )
 
     def get_dividends(self, asset: str | None = None) -> list[Trade]:
-        transactions = self._filter_dividends(asset)
-        return list(map(self._adapt_trade, transactions))
+        dividends = self._filter_received_dividends(asset)
+        dividends = list(map(self._adapt_trade, dividends))
 
-    def _filter_dividends(self, asset: str | None = None) -> Iterable[Transaction]:
+        reinvestments = self._filter_dividend_reinvestments(asset)
+        reinvestments = list(map(self._adapt_trade, reinvestments))
+
+        return dividends + reinvestments
+
+    def _filter_dividend_reinvestments(
+        self, asset: str | None = None
+    ) -> Iterable[Transaction]:
         transactions = filter(
             lambda x: x.transaction_type == "Receive Deliver"
+            and x.transaction_sub_type == "Dividend",
+            self._history,
+        )
+
+        if asset:
+            return filter(lambda x: x.symbol == asset, transactions)
+
+        return transactions
+
+    def _filter_received_dividends(
+        self, asset: str | None = None
+    ) -> Iterable[Transaction]:
+        transactions = filter(
+            lambda x: x.transaction_type == "Money Movement"
             and x.transaction_sub_type == "Dividend",
             self._history,
         )

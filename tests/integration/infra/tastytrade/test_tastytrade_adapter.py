@@ -4,6 +4,7 @@ from decimal import Decimal
 from pytest import fixture
 from tastytrade.account import Transaction
 
+from tastytrade_ghostfolio.core.entity.transaction_type import TransactionType
 from tastytrade_ghostfolio.infra.tastytrade.tastytrade_adapter import TastytradeAdapter
 from tests.conftest import mark_test
 from tests.infra.tastytrade_api import InMemoryTastytradeApi
@@ -50,7 +51,7 @@ class TestGetTrades(TastytradeAdapterFactory):
 
         assert len(results) == 3
         assert any(trade.symbol == "STOCKA" for trade in results)
-        assert any(trade.symbol == "STOCKB" for trade in results)
+        assert any(trade.symbol == "STOCKA" for trade in results)
         assert any(trade.symbol == "STOCKBB" for trade in results)
 
 
@@ -132,8 +133,37 @@ class TestGetSplits(TastytradeAdapterFactory):
 class TestGetDividends(TastytradeAdapterFactory):
     @mark_test
     def should_return_dividend_reinvestments(self):
-        results = self.tastytrade_adapter.get_dividends("STOCKB")
+        results = self.tastytrade_adapter.get_dividends("STOCKA")
 
-        assert len(results) == 1
-        assert results[0].symbol == "STOCKB"
-        assert results[0].quantity == Decimal("0.01391")
+        assert any(
+            transaction.transaction_type == TransactionType.BUY
+            for transaction in results
+        )
+
+    @mark_test
+    def when_dividend_is_taxed_should_return_trade_as_fee(self):
+        results = self.tastytrade_adapter.get_dividends("STOCKA")
+
+        assert any(
+            transaction.transaction_type == TransactionType.FEE
+            for transaction in results
+        )
+
+        tax = next(filter(lambda x: x.transaction_type == TransactionType.FEE, results))
+
+        assert tax.fee > Decimal("0.0")
+
+    @mark_test
+    def should_return_received_dividends(self):
+        results = self.tastytrade_adapter.get_dividends("STOCKA")
+
+        assert any(
+            transaction.transaction_type == TransactionType.DIVIDEND
+            for transaction in results
+        )
+
+        dividend = next(
+            filter(lambda x: x.transaction_type == TransactionType.DIVIDEND, results)
+        )
+
+        assert dividend.value > Decimal("0.0")

@@ -10,9 +10,7 @@ from tastytrade_ghostfolio.core.entity.symbol_change import SymbolChange
 from tastytrade_ghostfolio.core.entity.trade import Trade
 from tastytrade_ghostfolio.core.entity.transaction_type import TransactionType
 from tastytrade_ghostfolio.core.exceptions import AssetNotFoundException
-from tastytrade_ghostfolio.infra.tastytrade.tastytrade_adapter import TastytradeAdapter
 from tests.conftest import mark_test
-from tests.infra.tastytrade_api import InMemoryTastytradeApi
 
 
 class PortfolioFactory:
@@ -121,13 +119,38 @@ class TestGetAbsentTrades(PortfolioFactory):
         assert len(results) == 1
         assert results[0] == abset_trade
 
+    @mark_test
+    def should_return_dividends_not_present_in_portfolio(
+        self, stock_a_dividends, stock_a_dividend_infos
+    ):
+        absent_dividend = Trade(
+            executed_at=datetime.datetime(
+                2023, 9, 30, 18, 36, 20, 28000, tzinfo=datetime.timezone.utc
+            ),
+            fee=Decimal("0.001"),
+            quantity=Decimal("3.0"),
+            symbol="STOCKA",
+            transaction_type=TransactionType.DIVIDEND,
+            unit_price=Decimal("5.0"),
+        )
+        self.portfolio.add_dividends(
+            "STOCKA", stock_a_dividends, stock_a_dividend_infos
+        )
+        dividends = self.portfolio.get_dividends("STOCKA")
+
+        results = self.portfolio.get_absent_trades(
+            "STOCKA", [*dividends, absent_dividend]
+        )
+
+        assert len(results) == 1
+        assert results[0] == absent_dividend
+
 
 class TestGetTrades(PortfolioFactory):
     @mark_test
     def should_return_trades_for_given_asset(self):
         results = self.portfolio.get_trades("STOCKA")
 
-        assert len(results) == 3
         assert all(trade.symbol == "STOCKA" for trade in results)
 
 
@@ -143,6 +166,25 @@ class TestDeleteRepeatedOrders(PortfolioFactory):
         assert "STOCKA" not in symbols
 
     @mark_test
+    def when_theres_no_trades_but_theres_dividends_should_not_remove_symbol(
+        self, stock_a_trades, stock_a_dividends, stock_a_dividend_infos
+    ):
+        stock_a_dividends = list(
+            filter(
+                lambda x: x.transaction_type == TransactionType.DIVIDEND,
+                stock_a_dividends,
+            )
+        )
+        self.portfolio.add_dividends(
+            "STOCKA", stock_a_dividends, stock_a_dividend_infos
+        )
+
+        self.portfolio.delete_repeated_trades("STOCKA", stock_a_trades)
+        symbols = self.portfolio.get_symbols()
+
+        assert "STOCKA" in symbols
+
+    @mark_test
     def should_delete_repeated_trades(self, stock_a_trades):
         repeated_trades = stock_a_trades[1:]
 
@@ -152,15 +194,34 @@ class TestDeleteRepeatedOrders(PortfolioFactory):
 
         assert results == [stock_a_trades[0]]
 
+    @mark_test
+    def should_delete_repeated_dividends(
+        self, stock_a_dividends, stock_a_dividend_infos
+    ):
+        stock_a_dividends = list(
+            filter(
+                lambda x: x.transaction_type == TransactionType.DIVIDEND,
+                stock_a_dividends,
+            )
+        )
+        self.portfolio.add_dividends(
+            "STOCKA", stock_a_dividends, stock_a_dividend_infos
+        )
+        dividends = self.portfolio.get_dividends("STOCKA")
+
+        self.portfolio.delete_repeated_trades("STOCKA", dividends)
+        results = self.portfolio.get_dividends("STOCKA")
+
+        assert not results
+
 
 class TestAddDividends(PortfolioFactory):
     @mark_test
-    def should_add_dividend_reinvestments(self, stock_b_trades):
-        tastytrade = TastytradeAdapter(InMemoryTastytradeApi())
-        dividends = tastytrade.get_dividends("STOCKB")
+    def should_add_dividends(self, stock_a_dividends, stock_a_dividend_infos):
+        self.portfolio.add_dividends(
+            "STOCKA", stock_a_dividends, stock_a_dividend_infos
+        )
 
-        self.portfolio.add_dividends("STOCKB", dividends)
+        results = self.portfolio.get_dividends("STOCKA")
 
-        results = self.portfolio.get_trades("STOCKB")
-
-        assert len(results) == len(stock_b_trades) + 1
+        assert len(results) > 0

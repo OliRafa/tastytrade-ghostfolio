@@ -3,8 +3,15 @@ from decimal import Decimal
 
 from pytest import fixture
 
+from tastytrade_ghostfolio.core.entity.dividend_info import DividendInfo
 from tastytrade_ghostfolio.core.entity.trade import Trade
 from tastytrade_ghostfolio.core.entity.transaction_type import TransactionType
+from tastytrade_ghostfolio.infra.dividends_provider.dividends_provider_adapter import (
+    DividendsProviderAdapter,
+)
+from tastytrade_ghostfolio.infra.tastytrade.tastytrade_adapter import TastytradeAdapter
+from tests.infra.tastytrade_api import InMemoryTastytradeApi
+from tests.infra.yahoo_finance_api import InMemoryYahooFinanceApi
 
 
 @fixture
@@ -50,3 +57,19 @@ def stock_b_trades(stock_a_trades) -> list[Trade]:
         trade.symbol = "STOCKB"
 
     return trades
+
+
+@fixture
+def stock_a_dividends() -> list[Trade]:
+    tastytrade = TastytradeAdapter(InMemoryTastytradeApi())
+
+    return tastytrade.get_dividends("STOCKA")
+
+
+@fixture
+def stock_a_dividend_infos() -> list[DividendInfo]:
+    dividends_provider = DividendsProviderAdapter(InMemoryYahooFinanceApi())
+
+    start_date = datetime.date(2020, 5, 28)
+    end_date = datetime.date(2023, 9, 6)
+    return dividends_provider.get_by_symbol("STOCKA", start_date, end_date)

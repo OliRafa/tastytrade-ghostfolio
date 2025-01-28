@@ -1,4 +1,5 @@
 from tastytrade_ghostfolio.core.entity.asset import Asset
+from tastytrade_ghostfolio.core.entity.dividend_info import DividendInfo
 from tastytrade_ghostfolio.core.entity.split import Split
 from tastytrade_ghostfolio.core.entity.symbol_change import SymbolChange
 from tastytrade_ghostfolio.core.entity.trade import Trade
@@ -58,9 +59,15 @@ class Portfolio:
         for trade in trades:
             asset.delete_trade(trade)
 
-        if not asset.trades:
+        if not asset.trades and not asset.dividends:
             self._assets.remove(asset)
 
-    def add_dividends(self, asset: str, dividends: list[Trade]):
+    def add_dividends(
+        self, asset: str, dividends: list[Trade], dividend_infos: list[DividendInfo]
+    ):
         asset: Asset = self.get_asset(asset)
-        asset.add_trades(dividends)
+        asset.add_dividends(dividends, dividend_infos)
+
+    def get_dividends(self, asset: str) -> list[Trade]:
+        asset: Asset = self.get_asset(asset)
+        return asset.dividends
