@@ -14,7 +14,7 @@ class GhostfolioAccount(BaseModel):
     balance_in_base_currency: float = Field(
         0.0, alias="balanceInBaseCurrency", exclude=True
     )
-    comment: Optional[str] = "Created by Tastytrade-Ghostfolio."
+    comment: Optional[str] = "Managed by Tastytrade-Ghostfolio."
     currency: str = "USD"
     id: Optional[str] = Field(None, exclude=True)
     name: str
