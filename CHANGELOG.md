@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.1](https://github.com/OliRafa/tastytrade-ghostfolio/compare/v1.5.0...v1.5.1) (2025-05-08)
+
+
+### Bug Fixes
+
+* fix yfinance rate limit / too many requests ([e395b62](https://github.com/OliRafa/tastytrade-ghostfolio/commit/e395b62046592c185c90669efae03834d1f06469))
+
 # [1.5.0](https://github.com/OliRafa/tastytrade-ghostfolio/compare/v1.4.3...v1.5.0) (2025-01-28)
 
 
