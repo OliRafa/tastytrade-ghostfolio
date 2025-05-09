@@ -254,7 +254,7 @@ See <a href="https://github.com/OliRafa/tastytrade-ghostfolio/blob/main/LICENSE"
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [buy-me-a-coffee-shield]: https://img.shields.io/badge/buy_me_a_coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black
-[buy-me-a-coffee-url]: https://buymeacoffee.com/olirafa
+[buy-me-a-coffee-url]: https://buymeacoffee.com/olirafaa
 [poetry-shield]: https://img.shields.io/endpoint?url=https://python-poetry.org/badge/v0.json&style=for-the-badge
 [poetry-url]: https://python-poetry.org
 [python-shield]: https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54
