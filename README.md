@@ -13,6 +13,7 @@
 -->
 [![Python][python-shield]][python-url]
 [![Poetry][poetry-shield]][poetry-url]
+[![Github Sponsors][github-sponsors-shield]][github-sponsors-url]
 [![Buy Me A Coffee][buy-me-a-coffee-shield]][buy-me-a-coffee-url]
 
 
@@ -54,7 +55,6 @@
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
     <li><a href="#acknowledgments">Acknowledgments</a></li>
   </ol>
 </details>
@@ -255,6 +255,8 @@ See <a href="https://github.com/OliRafa/tastytrade-ghostfolio/blob/main/LICENSE"
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [buy-me-a-coffee-shield]: https://img.shields.io/badge/buy_me_a_coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black
 [buy-me-a-coffee-url]: https://buymeacoffee.com/olirafaa
+[github-sponsors-shield]: https://img.shields.io/badge/GitHub%20Sponsors-30363D?&logo=GitHub-Sponsors&style=for-the-badge
+[github-sponsors-url]: https://github.com/sponsors/OliRafa
 [poetry-shield]: https://img.shields.io/endpoint?url=https://python-poetry.org/badge/v0.json&style=for-the-badge
 [poetry-url]: https://python-poetry.org
 [python-shield]: https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54
