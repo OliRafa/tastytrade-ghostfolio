@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.2](https://github.com/OliRafa/tastytrade-ghostfolio/compare/v1.5.1...v1.5.2) (2025-05-09)
+
+
+### Bug Fixes
+
+* **readme:** change buy me a coffee url ([42132c4](https://github.com/OliRafa/tastytrade-ghostfolio/commit/42132c496e9cdecfe2eb9dee73bcb30c08754fe8))
+
 ## [1.5.1](https://github.com/OliRafa/tastytrade-ghostfolio/compare/v1.5.0...v1.5.1) (2025-05-08)
 
 
